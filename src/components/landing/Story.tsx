@@ -26,7 +26,7 @@ export function Story() {
             className="pointer-events-none absolute -top-14 -right-10 w-40 opacity-60"
           />
           <img
-            src={heroBottles.url}
+            src={heroBottlesStory.url}
             alt="Random Sips bottles, freshly bottled and ready for delivery"
             loading="lazy"
             className="w-full rounded-[45%_55%_52%_48%/48%_45%_55%_52%] object-cover shadow-card"

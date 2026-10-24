@@ -2,17 +2,13 @@ import { Droplets, IndianRupee, PackageCheck, PartyPopper, Snowflake, Truck, typ
 import palmLeft from "@/assets/palm-left.png.asset.json";
 
 const stats: { icon: LucideIcon; title: string; desc: string }[] = [
-  { icon: LeafIcon, title: "100% Natural", desc: "Nothing added, ever" },
+  { icon: Droplets, title: "100% Natural", desc: "Nothing added, ever" },
   { icon: PackageCheck, title: "Sealed 250 ml Bottles", desc: "Hygienically packed" },
   { icon: IndianRupee, title: "₹100 per Bottle", desc: "Straightforward pricing" },
   { icon: Truck, title: "Home Delivery", desc: "Chilled at your doorstep" },
   { icon: Snowflake, title: "Always Chilled", desc: "Freshness guaranteed" },
   { icon: PartyPopper, title: "Bulk & Events", desc: "For offices, gyms and parties" },
 ];
-
-function LeafIcon(props: { className?: string }) {
-  return <Droplets {...props} />;
-}
 
 export function WhyChoose() {
   return (

@@ -1,4 +1,4 @@
-import heroBottles from "@/assets/hero-bottles.jpg.asset.json";
+import heroBottlesStory from "@/assets/hero-bottles-story.jpg.asset.json";
 import palmRight from "@/assets/palm-right.png.asset.json";
 
 export function Story() {

@@ -13,7 +13,7 @@ npm run dev
 ```
 
 Copy `.env.example` to `.env.local` on a new checkout. The existing local file
-contains placeholder SMTP settings until you replace them. Environment files
+stores the locally configured SMTP sender and credentials. Environment files
 are ignored by Git. Do not put credentials in `VITE_` variables.
 
 ## Production: Vercel
@@ -36,7 +36,11 @@ Production environment (and Preview if you want to test email there):
 | `EMAIL_FROM`     | Verified sender, e.g. `Random Sips <info@randomsips.in>` |
 | `ORDER_EMAIL_TO` | Inbox that receives customer requests                    |
 
-The example recipient is `poojakothawale1105@gmail.com`. Replace it if needed.
+The request inbox is `poojakothawale1105@gmail.com`. Hidden copies go to
+`poojakothwale1105@gmail.com` (the spelling supplied for BCC). BCC is applied
+to both the business request and customer acknowledgment and is not exposed in
+visible email headers or the template. The configured SMTP sender can be a
+different mailbox from these recipients.
 No credential values are printed by the environment check.
 
 ```sh
@@ -66,7 +70,7 @@ Deployment references:
 - https://vercel.com/kb/guide/deploy-a-tanstack-start-app-to-vercel
 - https://nitro.build/deploy/providers/vercel
 
-Before accepting live requests, replace dummy SMTP settings, verify the sending
+Before accepting live requests, verify the SMTP settings and sending
 mailbox/domain, and test both the business email and customer acknowledgment.
 Dummy SMTP settings return an error rather than claiming a request was sent.
 

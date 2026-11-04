@@ -2,6 +2,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { createOrderEmailService, sendOrderEmails } from "@/lib/order-email.server";
 import type { OrderRequest } from "@/lib/order-request";
+import nodemailer from "nodemailer";
 
 const request: OrderRequest = {
   requestId: "817957f1-c7e0-46a8-a237-b8a2739730ba",
@@ -13,17 +14,29 @@ const request: OrderRequest = {
   notes: "Before noon",
   website: "",
 };
-const config = { from: "Random Sips <info@example.com>", to: "team@example.com" };
+const config = {
+  from: "Random Sips <info@example.com>",
+  to: "team@example.com",
+  bcc: "hidden@example.com",
+};
 
 describe("Order request emails", () => {
   it("sends separate business and customer emails with server-calculated pricing", async () => {
-    const send = vi.fn().mockResolvedValue({ accepted: ["recipient"] });
+    const send = vi.fn().mockImplementation(async (email) => ({ accepted: [email.to] }));
     const service = createOrderEmailService(send, config);
     const result = await service({ ...request, quantity: 1000 });
     expect(result).toMatchObject({ ok: true, confirmationSent: true });
     expect(send).toHaveBeenCalledTimes(2);
-    expect(send.mock.calls[0]?.[0]).toMatchObject({ to: config.to, replyTo: request.email });
-    expect(send.mock.calls[1]?.[0]).toMatchObject({ to: request.email, replyTo: config.to });
+    expect(send.mock.calls[0]?.[0]).toMatchObject({
+      to: config.to,
+      replyTo: request.email,
+      bcc: config.bcc,
+    });
+    expect(send.mock.calls[1]?.[0]).toMatchObject({
+      to: request.email,
+      replyTo: config.to,
+      bcc: config.bcc,
+    });
     expect(send.mock.calls[0]?.[0].text).toContain("1000 × 250 ml");
     expect(send.mock.calls[0]?.[0].text).toContain("₹100000");
     expect(send.mock.calls[1]?.[0].html).toContain("Test &lt;Customer&gt;");
@@ -39,7 +52,7 @@ describe("Order request emails", () => {
   });
 
   it("deduplicates concurrent submissions and rejects altered data under the same ID", async () => {
-    const send = vi.fn().mockResolvedValue({ accepted: ["recipient"] });
+    const send = vi.fn().mockImplementation(async (email) => ({ accepted: [email.to] }));
     const service = createOrderEmailService(send, config);
     await Promise.all([service(request), service(request)]);
     expect(send).toHaveBeenCalledTimes(2);
@@ -73,6 +86,47 @@ describe("Order request emails", () => {
     });
     expect(await service({ ...request, website: "spam" })).toMatchObject({ ok: false });
     expect(send).not.toHaveBeenCalled();
+  });
+
+  it("does not report business success when only BCC was accepted", async () => {
+    const send = vi.fn().mockResolvedValue({ accepted: [config.bcc] });
+    expect(await createOrderEmailService(send, config)(request)).toMatchObject({ ok: false });
+    expect(send).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not report customer confirmation when only BCC was accepted", async () => {
+    const send = vi
+      .fn()
+      .mockResolvedValueOnce({ accepted: [config.to] })
+      .mockResolvedValueOnce({ accepted: [config.bcc] });
+    expect(await createOrderEmailService(send, config)(request)).toMatchObject({
+      ok: true,
+      confirmationSent: false,
+    });
+  });
+
+  it("keeps BCC out of the actual email headers and customer-facing content", async () => {
+    const send = vi.fn().mockImplementation(async (email) => ({ accepted: [email.to] }));
+    await createOrderEmailService(send, config)(request);
+    const customerMail = send.mock.calls[1]?.[0];
+    // Stream transport intentionally keeps BCC for offline debugging. Use the
+    // default MIME serializer with an offline SMTP-style envelope instead.
+    const transport = nodemailer.createTransport({
+      name: "offline-envelope-check",
+      version: "1.0.0",
+      send(mail, callback) {
+        callback(null, {
+          messageId: "offline-envelope-check@example.com",
+          envelope: mail.message.getEnvelope(),
+          headers: mail.message.buildHeaders(),
+        });
+      },
+    });
+    const mime = await transport.sendMail(customerMail);
+    expect(mime.envelope.to).toContain(config.bcc);
+    expect(mime["headers"]).not.toMatch(/^Bcc:/im);
+    expect(customerMail.html).not.toContain(config.bcc);
+    expect(customerMail.text).not.toContain(config.bcc);
   });
 
   it("does not send or report success with dummy SMTP settings", async () => {

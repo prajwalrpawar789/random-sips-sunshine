@@ -5,6 +5,7 @@ import { customerConfirmation } from "./emails/customer-confirmation";
 type Email = {
   from: string;
   to: string;
+  bcc?: string;
   replyTo: string;
   subject: string;
   text: string;
@@ -12,7 +13,18 @@ type Email = {
   attachments?: ReturnType<typeof customerConfirmation>["attachments"];
 };
 type SendMail = (email: Email) => Promise<{ accepted: unknown[] }>;
-type Config = { from: string; to: string };
+type Config = { from: string; to: string; bcc?: string };
+function recipientAccepted(accepted: unknown[], expected: string) {
+  return accepted.some((recipient) => {
+    const address =
+      typeof recipient === "string"
+        ? recipient
+        : recipient && typeof recipient === "object" && "address" in recipient
+          ? recipient.address
+          : undefined;
+    return typeof address === "string" && address.toLowerCase() === expected.toLowerCase();
+  });
+}
 const escapeHtml = (value: string) =>
   value.replace(
     /[&<>"']/g,
@@ -60,12 +72,14 @@ export function createOrderEmailService(send: SendMail, config: Config) {
         const receipt = await send({
           from: config.from,
           to: config.to,
+          ...(config.bcc ? { bcc: config.bcc } : {}),
           replyTo: data.email,
           subject: `New Random Sips request · ${reference}`,
           text: businessText,
           html: htmlEmail("A fresh request just arrived", businessText),
         });
-        if (!receipt.accepted.length) throw new Error("Business recipient rejected");
+        if (!recipientAccepted(receipt.accepted, config.to))
+          throw new Error("Business recipient rejected");
       } catch {
         requests.delete(data.requestId);
         return {
@@ -77,10 +91,15 @@ export function createOrderEmailService(send: SendMail, config: Config) {
         const receipt = await send({
           from: config.from,
           to: data.email,
+          ...(config.bcc ? { bcc: config.bcc } : {}),
           replyTo: config.to,
           ...customerConfirmation(data, reference, config.to),
         });
-        return { ok: true, reference, confirmationSent: receipt.accepted.length > 0 };
+        return {
+          ok: true,
+          reference,
+          confirmationSent: recipientAccepted(receipt.accepted, data.email),
+        };
       } catch {
         // The business already received the request: don't ask the user to submit it again.
         return { ok: true, reference, confirmationSent: false };
@@ -101,6 +120,7 @@ export async function sendOrderEmails(data: OrderRequest): Promise<OrderResult> 
     SMTP_PASS,
     EMAIL_FROM,
     ORDER_EMAIL_TO,
+    ORDER_EMAIL_BCC,
   } = process.env;
   if (
     !SMTP_HOST ||
@@ -108,7 +128,9 @@ export async function sendOrderEmails(data: OrderRequest): Promise<OrderResult> 
     !SMTP_PASS ||
     !EMAIL_FROM ||
     !ORDER_EMAIL_TO ||
-    /example\.com|replace[-_ ]?me|dummy/i.test(`${SMTP_HOST} ${SMTP_USER} ${SMTP_PASS}`)
+    /example\.com|yourprovider|yourdomain|yourcompany|replace[-_ ]?me|dummy/i.test(
+      `${SMTP_HOST} ${SMTP_USER} ${SMTP_PASS}`,
+    )
   ) {
     return {
       ok: false,
@@ -142,6 +164,7 @@ export async function sendOrderEmails(data: OrderRequest): Promise<OrderResult> 
     configuredService = createOrderEmailService((email) => transport.sendMail(email), {
       from: EMAIL_FROM,
       to: ORDER_EMAIL_TO,
+      ...(ORDER_EMAIL_BCC ? { bcc: ORDER_EMAIL_BCC } : {}),
     });
   }
   return configuredService(data);

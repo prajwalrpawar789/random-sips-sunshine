@@ -17,6 +17,7 @@ for (const key of [
   "SMTP_PASS",
   "EMAIL_FROM",
   "ORDER_EMAIL_TO",
+  "ORDER_EMAIL_BCC",
 ]) {
   if (process.env[key] === undefined && emailEnv[key] !== undefined)
     process.env[key] = emailEnv[key];

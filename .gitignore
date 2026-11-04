@@ -15,10 +15,17 @@ dist-ssr
 .tanstack/**
 .nitro
 *.local
+.env
+.env.*
+!.env.example
 
 # Wrangler / Cloudflare
 .wrangler/
 .dev.vars
+.vercel/
+
+# Generated local email previews (regenerate with npm run email:preview)
+artifacts/
 
 # Editor directories and files
 .vscode/*

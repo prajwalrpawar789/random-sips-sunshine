@@ -78,14 +78,16 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Lovable App" },
-      { name: "description", content: "Lovable Generated Project" },
-      { name: "author", content: "Lovable" },
-      { property: "og:title", content: "Lovable App" },
-      { property: "og:description", content: "Lovable Generated Project" },
+      { title: "Random Sips — Fresh. Natural. Refreshing." },
+      {
+        name: "description",
+        content: "Fresh coconut water and a little everyday tropical goodness from Random Sips.",
+      },
+      { name: "author", content: "Random Sips" },
+      { property: "og:title", content: "Random Sips" },
+      { property: "og:description", content: "Sip the sweetness. Taste the tropics." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
-      { name: "twitter:site", content: "@Lovable" },
     ],
     links: [
       {
